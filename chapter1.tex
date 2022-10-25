@@ -1,0 +1,149 @@
+\chapter{Pandas Foundations\label{chapter1}}
+\section{Importing pandas}
+
+\section{Introduction}
+
+\section{The pandas DataFrame}
+
+\section{DataFrame attributes}
+
+\section{Understanding data types\label{Understanding data types}}
+
+\section{Selecting a column}
+
+\section{Calling Series methods\label{Calling Series methods}}
+
+\section{Series operations}
+
+\section{Chaining Series methods}
+
+\section{Renaming column names}
+
+\section{Creating and deleting columns}
+pandas has a few different ways to add new columns to a DataFrame.
+In this recipe, we create new columns in the movie dataset by using the \texttt{.assign} method and then delete columns with the \texttt{.drop} method.
+
+\subsection{How to do it...}
+\begin{enumerate}
+\item
+
+
+One way to create a new column is to do an index assignment. Note that this will not return a new DataFrame but mutate the existing DataFrame. If you assign the column to a scalar value, it will use that value for every cell in the column. 
+\begin{py}{}
+
+\end{py}
+\item While this method works and is common, as I find myself chaining methods very often, I prefer to use the .assign method instead. This will return a new DataFrame with the new column. Because it uses the parameter name as the column name, the  column name must be a valid parameter name:
+\begin{py}{}
+movies = pd.read_csv('movie.csv')
+idx_map = {
+    'Avatar': 'Ratava',
+    'Spectre': 'Ertcepes',
+    "Pirates of the Caribbean: At World's End": 'POC',
+}
+col_map = {
+    'aspect_ratio': 'aspect',
+    'movie_facebook_likes': 'fblikes',
+}
+(
+    movies.rename(index=idx_map, columns=col_map
+                 ).assign(has_seen=0)
+)
+\end{py}
+\item Let's 
+add up all actor and director Facebook like columns and assign them to the \texttt{total\_likes} column. We can do this in a couple of ways.
+\begin{py}{}
+total = (
+    movies['actor_1_facebook_likes']
+    + movies['actor_2_facebook_likes']
+    + movies['actor_3_facebook_likes']
+    + movies['director_facebook_likes']
+)
+total.head(5)
+\end{py}
+My preference is to use methods that we can chain, so I prefer calling .sum here. 
+I will pass in a list of columns to select to .loc to pull out just those columns that 
+I want to sum:
+\begin{py}{}
+cols = [
+    'actor_1_facebook_likes',
+    'actor_2_facebook_likes',
+    'actor_3_facebook_likes',
+    'director_facebook_likes'
+]
+sum_cols = movies.loc[:, cols].sum(axis='columns')
+sum_cols.head()
+\end{py}
+Then we can assign this Series to the new column. Note that when we called the 
++ operator, the result had missing numbers (NaN), but the .sum method ignores 
+missing numbers by default, so we get a different result:
+\begin{py}{}
+movies.assign(total_likes=sum_cols).head()
+\end{py}
+
+Another option is to pass in a function as the value of the parameter in the call to the \texttt{.assign} method. This function accepts a DataFrame as input and should 
+return a Series:
+\begin{py}{}
+def sum_likes(df):
+    return df[
+        [
+            c
+            for c in df.columns 
+            if 'like' in c and ('actor' in c or 'director' in c)
+        ]
+    ].sum(axis=1)
+movies.assign(total_likes=sum_likes).head(3)
+\end{py}
+\item
+When numeric columns are added to one another as in the 
+preceding step using the plus operator, the result is \texttt{NaN} if there is any value missing. 
+However, with the \texttt{.sum} method it converts \texttt{NaN} to zero.
+\begin{py}{}
+(
+    movies.assign(total_likes=sum_likes)['total_likes']
+    .isna()
+    .sum()
+)
+
+(
+    movies.assign(total_likes=total)['total_likes']
+    .isna()
+    .sum()
+)
+\end{py}
+We could fill in the missing values with zero as well:
+\begin{py}{}
+(
+    movies.assign(total_likes=total.fillna(0))[
+        'total_likes'
+    ]
+    .isna()
+    .sum()
+)
+\end{py}
+
+
+\end{enumerate}
+
+
+\subsection{There's more...}
+
+It is possible to insert a new column into a specific location in a DataFrame with the .insert
+method. The .insert method takes the integer position of the new column as its first 
+argument, the name of the new column as its second, and the values as its third. You will 
+need to use the \texttt{.get\_loc} Index method to find the integer location of the column name.
+The .insert method modifies the calling DataFrame in-place, so there won't be an 
+assignment statement. It also returns None.
+\begin{py}{}
+movies.insert(
+    loc=profit_index,
+    column='profit',
+    value=movies['gross'] - movies['budget'],
+)
+\end{py}
+
+
+An alternative to deleting columns with the .drop method is to use the del statement. This 
+also does not return a new DataFrame, so favor .drop over this:
+\begin{py}{}
+del movies['director_name']
+\end{py}
