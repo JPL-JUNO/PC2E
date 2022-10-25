@@ -1,0 +1,511 @@
+\chapter{Essential DataFrame Operations}
+This chapter covers many fundamental operations of the DataFrame. Many of the recipes 
+will be similar to those in Chapter \ref{chapter1}~\nameref{chapter1}, Pandas Foundations, which primarily covered operations 
+on a Series.
+\section{Introduction}
+It is often necessary to focus on a subset of the current working dataset, which is accomplished by selecting multiple columns.
+\begin{py}{}
+import numpy as np
+import pandas as pd
+\end{py}
+
+\section{Selecting multiple DataFrame columns}
+\subsection{How to do it\dots}
+\begin{enumerate}
+\item Read in the movie dataset, and pass in a list of the desired columns to the indexing operator:
+\begin{py}{}
+movies = pd.read_csv('movie.csv')
+movie_actor_director = movies[
+    [
+        'actor_1_name',
+        'actor_2_name',
+        'actor_3_name',
+        'director_name'
+    ]
+]
+movie_actor_director.head(3)
+\end{py}
+
+\item Using 
+the index operation can return either a Series or a DataFrame. If we pass in a list with a single item, we will get back a DataFrame. If we pass in just a string with the column name, we will get a Series back:
+\begin{py}{}
+type(movies[['director_name']])
+type(movies['director_name'])
+\end{py}
+
+We can also use .loc to pull out a column by name. Because this index operation requires that we pass in a row selector first, we will use a colon (:) to indicate a slice that selects all of the rows. This can also return either a DataFrame or a Series:
+\begin{py}{}
+type(movies.loc[:, ['director_name']])
+type(movies.loc[:, 'director_name'])
+\end{py}
+\end{enumerate}
+\subsection{How it works}
+The DataFrame index operator is very flexible and capable of accepting a number of different objects. If a string is passed, it will return a single-dimensional Series. If a list is passed to the indexing operator, it returns a DataFrame of all the columns in the list in the specified order.
+\subsection{There's more}
+Passing a long list inside the indexing operator might cause readability issues. To help with this, you may save all your column names to a list variable first.
+\begin{py}{}
+cols = ['actor_1_name', 'actor_2_name', 'actor_3_name', 'director_name']
+movie_actor_director = movies[cols]
+\end{py}
+One of the most common exceptions raised when working with pandas is KeyError. This error is mainly due to mistyping of a column or index name. This same error is raised whenever a multiple column selection is attempted without the use of a list:
+\begin{py}{}
+movies[
+    'actor_1_name',
+    'actor_2_name',
+    'actor_3_name',
+    'director_name',
+]
+\end{py}
+\section{Selecting columns with methods}
+Although column selection is usually done with the indexing operator, there are some DataFrame methods that facilitate their selection in an alternative manner. The \texttt{.select\_dtypes} and \texttt{.filter} methods are two useful methods to do this. If you want to select by type, you need to be familiar with pandas data types(\nameref{Understanding data types}).
+
+\subsection{How to do it\dots}
+\begin{enumerate}
+\item
+Use the \texttt{.get\_dtype\_counts} method to output the number of columns with each specific data type:
+\begin{py}{}
+movies = pd.read_csv('movie.csv')
+def shorten(col):
+    return (
+        str(col)
+        .replace('facebook_likes', 'fb')
+        .replace('_for_reviews', '')
+    )
+movies = movies.rename(columns=shorten)
+movies.dtypes.value_counts()
+\end{py}
+
+\item
+Use the \texttt{.select\_dtypes} method to select only the integer columns:
+\begin{py}{}
+movies.select_dtypes(include='int').head(3)
+\end{py}
+\item
+If you would like to select all the numeric columns, you may pass the string \texttt{number} to the \texttt{include} parameter:
+\begin{py}{}
+movies.select_dtypes(include='number').head()
+\end{py}
+\item
+If we wanted integer and string columns we could do the following:
+\begin{py}{}
+movies.select_dtypes(include=['int', 'object']).head()
+\end{py}
+
+\item
+To exclude only floating-point columns, do the following:
+\begin{py}{}
+movies.select_dtypes(exclude='float').head()
+\end{py}
+
+\item
+An alternative method to select columns is with the \texttt{.filter} method. This method is flexible and searches column names (or index labels) based on which parameter is used. Here, we use the \texttt{like} parameter to search for all the Facebook columns or the names that contain the exact string, fb. The \texttt{like} parameter is checking for substrings in column names:
+\begin{py}{}
+movies.filter(like='fb').head()
+\end{py}
+
+\item
+The \texttt{.filter} method has more tricks (or parameters) up its sleeve. If you use the \texttt{items} parameters, you can pass in a list of column names:
+\begin{py}{}
+cols = [
+    'actor_1_name',
+    'actor_2_name',
+    'actor_3_name',
+    'director_name',
+]
+movies.filter(items=cols).head()
+\end{py}
+
+\item
+The \texttt{.filter} method allows columns to be searched with \emph{regular expressions} using the \emph{regex} parameter. Here, we search for all columns that have a digit somewhere 
+in their name:
+\begin{py}{}
+movies.filter(regex=r'\d').head()
+\end{py}
+\end{enumerate}
+\subsection{How it works\dots}
+Step 1 lists the frequencies of all the different data types. Alternatively, you may use the .dtypes attribute to get the exact data type for each column. The .select\_dtypes method accepts either a list or single data type in its include or exclude parameters and returns a DataFrame with columns of just those given data types (or not those types if excluding columns). The list values may be either the string name of the data type or the actual Python object.
+
+The .filter method selects columns by only inspecting the column names and not the actual data values. It has three mutually exclusive parameters: items, like, and regex, only one of which can be used at a time.
+
+The like parameter takes a string and attempts to find all the column names that contain 
+that exact string somewhere in the name. To gain more flexibility, you may use the regex
+parameter instead to select column names through a regular expression. This particular 
+regular expression, r'\textbackslash d', represents all digits from zero to nine and matches any string 
+with at least a single digit in it.
+
+The filter method comes with another parameter, items, which takes a list of exact column 
+names. This is nearly an exact duplication of the index operation, except that a KeyError
+will not be raised if one of the strings does not match a column name. For instance, \texttt{movies.filter(items=['actor\_1\_name', 'asdf'])} runs without error and returns a single 
+column DataFrame.
+
+\subsection{There's more\dots}
+One confusing aspect of .select\_dtypes is its flexibility to take both strings and Python objects. The following list should clarify all the possible ways to select the many different column data types. There is no standard or preferred method of referring to data types in pandas, so it's good to be aware of both ways:
+\begin{itemize}
+\item 
+\texttt{np.number}, \texttt{'number'} – Selects both integers and floats regardless of size
+\item 
+\texttt{np.float64}, \texttt{np.float\_}, \texttt{float}, \texttt{'float64'}, \texttt{'float\_'}, \texttt{'float'} – Selects
+only 64-bit floats
+\item 
+\texttt{np.float16}, \texttt{np.float32}, \texttt{np.float128}, \texttt{'float16'}, \texttt{'float32'},
+\texttt{'float128'} – Respectively selects exactly 16, 32, and 128-bit floats
+\item 
+np.floating, 'floating' – Selects all floats regardless of size
+\item 
+np.int0, np.int64, np.int\_, int, 'int0', 'int64', 'int\_', 'int' – Selects
+only 64-bit integers
+\item 
+np.int8, np.int16, np.int32, 'int8', 'int16', 'int32' – Respectively
+selects exactly 8, 16, and 32-bit integers
+\item 
+np.integer, 'integer' – Selects all integers regardless of size
+\item 
+'Int64' – Selects nullable integer; no NumPy equivalent
+\item 
+np.object, 'object', 'O' – Select all object data types
+\item 
+np.datetime64, 'datetime64', 'datetime' – All datetimes are 64 bits
+\item 
+np.timedelta64, 'timedelta64', 'timedelta' – All timedeltas are 64 bits
+\item 
+pd.Categorical, 'category' – Unique to pandas; no NumPy equivalent
+\end{itemize}
+Because all integers and floats default to 64 bits, you may select them by using the string
+'int' or 'float' as you can see from the preceding bullet list. If you want to select all
+integers and floats regardless of their specific size, use the string 'number'.
+\section{Ordering column names}
+There are no standardized set of rules that dictate how columns should be organized within
+a dataset. However, it is good practice to develop a set of guidelines that you consistently
+follow. This is especially true if you work with a group of analysts who share lots of datasets.
+The following is a guideline to order columns:
+\begin{itemize}
+\item
+Classify each column as either categorical or continuous
+\item
+Group common columns within the categorical and continuous columns
+\item
+Place the most important groups of columns first with categorical columns before
+continuous ones
+\end{itemize}
+\subsection{How to do it\dots}
+\begin{py}{}
+movies = pd.read_csv('movie.csv')
+def shorten(col):
+    return col.replace('facebook_likes', 'fb').replace('_for_reviews', '')
+movies = movies.rename(columns=shorten)
+cat_core = [
+    'movie_title', 
+    'title_year', 
+    'content_rating', 
+    'genres'
+]
+movies.columns
+\end{py}
+
+\begin{enumerate}
+\item The columns don't appear to have any logical ordering to them. Organize the names sensibly into lists so that the guideline from the previous section is followed:
+
+\begin{py}{}
+cat_people = ['director_name', 'actor_1_name', 'actor_2_name', 'actor_3_name']
+cat_other = ['color', 'country', 'language', 'plot_keywords', 'movies_imdb_link']
+cont_fb = ['director_fb', 'actor_1_fb', 'actor_2_fb', 
+           'actor_3_fb', 'cast_total_fb','movier_fb']
+cont_finance = ['budget', 'gross']
+cont_num_reviews = ['num_voted_users', 'num_user', 'num_critic']
+cont_other = ['imdb_score', 'duration', 'aspect_ratio', 'facenumber_in_poster']
+\end{py}
+\item
+Concatenate all the lists together to get the final column order. Also, ensure that this list contains all the columns from the original:
+\begin{py}{}
+new_col_order = (
+    cat_core
+    + cat_people
+    + cat_other
+    + cont_fb
+    + cont_finance
+    + cont_num_reviews
+    + cont_other
+)
+set(movies.columns) == set(new_col_order)
+\end{py}
+\item Pass the list with the new column order to the indexing operator of the DataFrame to
+reorder the columns:
+\begin{py}{}
+movies[new_col_order].head(3)
+\end{py}
+
+\end{enumerate}
+
+\subsection{There's more\dots}
+There are alternative guidelines for ordering columns besides the suggestion mentioned
+earlier. Hadley Wickham's seminal paper on Tidy Data suggests placing the fixed variables
+first, followed by measured variables. As this data does not come from a controlled
+experiment, there is some flexibility in determining which variables are fixed and which ones
+are measured. 
+
+\section{Summarizing a DataFrame}
+In the \nameref{Calling Series methods} recipe in Chapter \ref{chapter}, \nameref{chapter}, a variety of methods
+operated on a single column or Series of data. Many of these were aggregation or reducing
+methods that returned a single scalar value. When these same methods are called from a
+DataFrame, they perform that operation for each column at once and reduce the results for
+each column in the DataFrame. They return a Series with the column names in the index and
+the summary for each column as the value.
+
+\subsection{How to do it\dots}
+\begin{enumerate}
+\item
+Read in the movie dataset, and examine the basic descriptive properties, .shape,
+.size, and .ndim, along with running the len function:
+\begin{py}{}
+movies = pd.read_csv('movie.csv')
+movies.shape, movies.size, movies.ndim, len(movies)
+\end{py}
+\item
+The .count method shows the number of non-missing values for each column. It is
+an aggregation method as it summarizes every column in a single value. The output
+is a Series that has the original column names as its index:
+\begin{py}{}
+movies.count()
+\end{py}
+\item
+The other methods that compute summary statistics, \texttt{.min}, \texttt{.max}, \texttt{.mean}, \texttt{.median}, and \texttt{.std}, return Series that have the column names of the numeric columns in the
+index and their aggregations as the values:
+\begin{py}{}
+movies.min(numeric_only=True)
+movies.max(numeric_only=True)
+movies.mean(numeric_only=True)
+movies.median(numeric_only=True)
+movies.std(numeric_only=True)
+\end{py}
+\item
+The \texttt{.describe} method is very powerful and calculates all the descriptive statistics
+and quartiles at once. The end result is a DataFrame with the descriptive statistics
+names as its index. I like to transpose the results using \texttt{.T} as I can usually fit more
+information on the screen that way:
+\begin{py}{}
+movies.describe().T
+\end{py}
+\item
+It is possible to specify exact quantiles in the .describe method using the
+percentiles parameter:
+\begin{py}{}
+movies.describe(percentiles=[.025, .33, .99, .995]).T
+\end{py}
+
+\end{enumerate}
+
+\subsection{How it works\dots}
+Step 1 gives basic information on the size of the dataset. The \texttt{.shape} attribute returns
+a tuple with the number of rows and columns. The \texttt{.size} attribute returns the total number
+of elements in the DataFrame, which is just the product of the number of rows and columns.
+The \texttt{.ndim} attribute returns the number of dimensions, which is two for all DataFrames.
+When a DataFrame is passed to the built-in len function, it returns the number of rows.
+
+The \texttt{.describe} method displays the summary statistics of the numeric columns. You can
+expand its summary to include more quantiles by passing a list of numbers between 0 and
+1 to the percentiles parameter. See the \nameref{Developing a data analysis routine} recipe for more
+on the \texttt{.describe} method.
+
+\subsection{There's more\dots}
+
+To see how the \texttt{.skipna} parameter affects the outcome, we can set its value to False and
+rerun step 3 from the preceding recipe. Only numeric columns without missing values will
+calculate a result:
+\begin{py}{}
+movies.min(skipna=False, numeric_only=True)
+\end{py}
+
+\section{Chaining DataFrame methods}
+The \nameref{Chaining Series methods} recipe in Chapter \ref{chapter1}, \nameref{Pandas Foundations}, showcased several
+examples of chaining Series methods together. All the method chains in this chapter will begin
+from a DataFrame. One of the keys to method chaining is to know the exact object being
+returned during each step of the chain. In pandas, this will nearly always
+be a DataFrame, Series, or scalar value.
+
+\subsection{How to do it\dots}
+\begin{enumerate}
+\item
+
+
+We will use the \texttt{.isnull} method to get a count of the missing values. This method
+will change every value to a Boolean, indicating whether it is missing:
+\begin{py}{}
+movies = pd.read_csv('movie.csv')
+def shorten(col):
+    return col.replace('facebook_likes', 'fb').replace(
+        '_for_reviews', ''
+    )
+movies = movies.rename(columns=shorten)
+movies.isnull().head(3)
+\end{py}
+\item
+
+We will chain the .sum method that interprets True and False as 1 and
+0, respectively. Because this is a reduction method, it aggregates the results
+into a Series:
+\begin{py}{}
+movies.isnull().sum().head(3)
+\end{py}
+\item
+
+We can go one step further and take the sum of this Series and return the count
+of the total number of missing values in the entire DataFrame as a scalar value:
+\begin{py}{}
+movies.isnull().sum().sum()
+\end{py}
+\item
+
+A way to determine whether there are any missing values in the DataFrame is to use
+the .any method twice in succession:
+
+\begin{py}{}
+movies.isnull().any().any()
+\end{py}
+\end{enumerate}
+\subsection{There's more\dots}
+Most of the columns in the movie dataset with the object data type contain missing values.
+By default, aggregation methods (.min, .max, and .sum), do not return anything for object
+columns. To force pandas to return something for each column, we must fill in the missing values. Here, we choose an empty string:
+\begin{py}{}
+movies.select_dtypes(['object']).fillna('').max()
+\end{py}
+
+For purposes of readability, method chains are often written as one method call per line
+surrounded by parentheses. This makes it easier to read and insert comments on what is
+returned at each step of the chain, or comment out lines to debug what is happening:
+\begin{py}{}
+(
+    movies.select_dtypes(['object'])
+    .fillna('')
+    .max()
+)
+\end{py}
+
+\section{DataFrame operations}
+The Python arithmetic and comparison operators work with DataFrames, as they do with Series.
+
+When an arithmetic or comparison operator is used with a DataFrame, each value of each
+column gets the operation applied to it. Typically, when an operator is used with a DataFrame,
+the columns are either all numeric or all object (usually strings). If the DataFrame does
+not contain homogeneous data, then the operation is likely to fail. 
+
+Attempting to add 5 to each value of the DataFrame raises a TypeError as integers cannot
+be added to strings:
+
+\begin{py}{}
+colleges = pd.read_csv('college.csv')
+colleges + 5
+\end{py}
+To successfully use an operator with a DataFrame, first select homogeneous data. For this
+recipe, we will select all the columns that begin with \texttt{'UGDS\_'}. These columns represent the
+fraction of undergraduate students by race. To get started, we import the data and use the
+institution name as the label for our index, and then select the columns we desire with the
+\texttt{.filter} method:
+\begin{py}{}
+colleges = pd.read_csv('college.csv', index_col='INSTNM')
+colleges_ugds = colleges.filter(like='UGDS_')
+colleges_ugds.head(3)
+\end{py}
+\subsection{How to do it\dots}
+\begin{enumerate}
+\item
+\textbf{pandas does bankers rounding, numbers that are exactly halfway between either side to the even side.}
+\begin{py}{bankers rounding}
+name = 'Northwest-Shoals Community College'
+colleges_ugds.loc[name]
+colleges_ugds.loc[name].round(2)
+\end{py}
+\end{enumerate}
+\subsection{How it works\dots}
+NumPy and Python 3 round numbers that are exactly halfway between either side to the even
+number. The bankers rounding (or ties to even \url{http://bit.ly/2x3V5TU}) technique is not
+usually what is formally taught in schools. It does not consistently bias numbers to the higher
+side (\url{http://bit.ly/2zhsPy8}).
+\subsection{There's more\dots}
+Just as with Series, DataFrames have method equivalents of the operators. You may replace
+the operators with their method equivalents:
+\begin{py}{}
+college2 = (
+    colleges_ugds.add(0.00501).floordiv(0.01).div(100)
+)
+college2.equals(colleges_ugds_up_round)
+\end{py}
+
+\section{Comparing missing values}
+pandas uses the NumPy NaN (np.nan) object to represent a missing value. This is an unusual object and has interesting mathematical properties. For instance, \textbf{it is not equal to itself}. \textbf{Even Python's None object evaluates as True when compared to itself}:
+\begin{py}{}
+np.nan == np.nan
+None == None
+\end{py}
+
+\textbf{All other comparisons against np.nan also return False, except not equal to (!=)}:
+\begin{py}{}
+np.nan > 5
+5 > np.nan
+np.nan != 5
+\end{py}
+\subsection{Getting ready}
+Series and DataFrames use the equals operator, ==, to make element-by-element comparisons. The result is an object with the same dimensions. This recipe shows you how to use the equals operator, which is very different from the .equals method.
+\begin{py}{}
+college = pd.read_csv('college.csv', index_col='INSTNM')
+college_ugds = college.filter(like='UGDS_')
+\end{py}
+\subsection{How to do it\dots}
+\begin{enumerate}
+\item
+To get an idea of how the equals operator works, let's compare each element to a scalar value. 
+
+\item
+This works as expected but becomes problematic whenever you attempt to compare
+DataFrames with missing values. You may be tempted to use the equals operator
+to compare two DataFrames with one another on an element-by-element basis.
+Take, for instance, college\_ugds compared against itself, as follows.
+
+\item
+At first glance, all the values appear to be equal, as you would expect. However, using
+the .all method to determine if each column contains only True values yields an
+unexpected result.
+
+\begin{py}{}
+college_ugds == 0
+
+college_self_compare = college_ugds == college_ugds
+college_self_compare.head(3)
+
+college_self_compare.all()
+\end{py}
+\item
+This happens because missing values do not compare equally with one another.
+If you tried to count missing values using the equal operator and summing up the
+Boolean columns, you would get zero for each one:
+\item
+Instead of using == to find missing numbers, use the .isna method:
+
+\item
+\textbf{The correct way to compare two entire DataFrames with one another is not with the equals operator (==) but with the .equals method. This method treats NaNs that are in the same location as equal (note that the .eq method is the equivalent of ==)}:
+\begin{py}{}
+(college_ugds == np.nan).sum()
+
+college_ugds.isna().sum()
+
+college_ugds.equals(college_ugds)
+
+# colleges_ugds.eq(college_ugds)
+\end{py}
+
+\end{enumerate}
+\subsection{There's more\dots}
+Inside the pandas.testing sub-package, a function exists that developers should use when
+creating unit tests. The \texttt{assert\_frame\_equal} function raises an AssertionError if two
+DataFrames are not equal. It returns None if the two DataFrames are equal:
+\begin{py}{}
+from pandas.testing import assert_frame_equal
+assert_frame_equal(college_ugds, college_ugds) is None
+\end{py}
+
+Unit tests are a very important part of software development and ensure that the code
+is running correctly. pandas contains many thousands of unit tests that help ensure that
+it is running properly. To read more on how pandas runs its unit tests, see the Contributing
+to pandas section in the documentation (\url{http://bit.ly/2vmCSU6}).
+\section{Transposing the direction of a DataFrame operation}
+\section{Determining college campus diversity}
