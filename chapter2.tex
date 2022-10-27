@@ -433,23 +433,23 @@ college2.equals(colleges_ugds_up_round)
 
 \section{Comparing missing values}
 pandas uses the NumPy NaN (np.nan) object to represent a missing value. This is an unusual object and has interesting mathematical properties. For instance, \textbf{it is not equal to itself}. \textbf{Even Python's None object evaluates as True when compared to itself}:
-\begin{py}{}
+\begin{minted}{python}
 np.nan == np.nan
 None == None
-\end{py}
+\end{minted}
 
 \textbf{All other comparisons against np.nan also return False, except not equal to (!=)}:
-\begin{py}{}
+\begin{minted}{python}
 np.nan > 5
 5 > np.nan
 np.nan != 5
-\end{py}
+\end{minted}
 \subsection{Getting ready}
 Series and DataFrames use the equals operator, ==, to make element-by-element comparisons. The result is an object with the same dimensions. This recipe shows you how to use the equals operator, which is very different from the .equals method.
-\begin{py}{}
+\begin{minted}{python}
 college = pd.read_csv('college.csv', index_col='INSTNM')
 college_ugds = college.filter(like='UGDS_')
-\end{py}
+\end{minted}
 \subsection{How to do it\dots}
 \begin{enumerate}
 \item
@@ -498,14 +498,144 @@ college_ugds.equals(college_ugds)
 Inside the pandas.testing sub-package, a function exists that developers should use when
 creating unit tests. The \texttt{assert\_frame\_equal} function raises an AssertionError if two
 DataFrames are not equal. It returns None if the two DataFrames are equal:
-\begin{py}{}
+\begin{minted}{python}
 from pandas.testing import assert_frame_equal
 assert_frame_equal(college_ugds, college_ugds) is None
-\end{py}
+\end{minted}
 
 Unit tests are a very important part of software development and ensure that the code
 is running correctly. pandas contains many thousands of unit tests that help ensure that
 it is running properly. To read more on how pandas runs its unit tests, see the Contributing
 to pandas section in the documentation (\url{http://bit.ly/2vmCSU6}).
 \section{Transposing the direction of a DataFrame operation}
+Many DataFrame methods have an axis parameter. This parameter controls the direction
+in which the operation takes place. Axis parameters can be 'index' (or 0) or 'columns'
+(or 1). I prefer the string versions are they are more explicit and tend to make the code easier
+to read.
+
+Nearly all DataFrame methods default the axis parameter to 0, which applies to operations
+along the index.
+\subsection{How to do it\dots}
+\begin{enumerate}
+\item
+The .count method returns the
+number of non-missing values. By default, its axis parameter is set to 0.
+\item
+Changing the axis parameter to 'columns' changes the direction of the operation
+so that we get back a count of non-missing items in each row.
+
+The axis parameter is almost always set to 0. So, step 2 is equivalent to both
+\texttt{college\_ugds.count(axis=0)}
+and \texttt{college\_ugds.count(axis='indexs')}
+
+\item
+To get an idea of the distribution of each column, the .median method can be used.
+
+\begin{py}{}
+college = pd.read_csv('college.csv', index_col='INSTNM')
+college_ugds = college.filter(like='UGDS_')
+college_ugds.head(3)
+
+college_ugds.count()
+
+college_ugds.count(axis='columns').head()
+
+college_ugds.median(axis='index')
+\end{py}
+
+\end{enumerate}
+\subsection{There's more\dots}
+The .cumsum method with axis=1 accumulates the race percentages across each row.
+It gives a slightly different view of the data. For example, it is very easy to see the exact
+percentage of white and black students for each school:
+\begin{minted}{python}
+college_ugds_cumsum = college_ugds.cumsum(axis='columns')
+college_ugds_cumsum.head(3)
+\end{minted}
+
 \section{Determining college campus diversity}
+Our college dataset classifies race into nine different categories. When trying to quantify
+something without an obvious definition, such as diversity, it helps to start with something
+simple. In this recipe, our diversity metric will equal the count of the number of races having
+greater than 15\% of the student population.
+
+\subsection{How to do it\dots}
+\begin{enumerate}
+\item
+We can count
+all the missing values for each row and sort the resulting Series from the highest
+to lowest:
+\begin{py}{}
+(
+    college_ugds.isnull()
+    .sum(axis='columns')
+    .sort_values(ascending=False)
+    .head()
+)
+\end{py}
+
+\item
+Now that we have seen the colleges that are missing all their race columns, we
+can use the .dropna method to drop all rows that have all 
+missing. We can then count the remaining missing values:
+\begin{py}{}
+college_ugds = college_ugds.dropna(how='all')
+college_ugds.isnull().sum()
+\end{py}
+\item
+There are no missing values left in the dataset. We can now calculate our diversity
+metric. To get started, we will use the greater than or equal DataFrame method,
+.ge, to return a DataFrame with a Boolean value for each cell.
+\item
+From here, we can use the .sum method to count the True values for each college.
+Notice that a Series is returned.
+
+\item
+To get an idea of the distribution, we will use the .value\_counts method on this
+Series.
+
+\item
+Amazingly, two schools have more than 15\% in five different race categories. Let's
+sort the diversity\_metric Series to find out which ones they are:
+\begin{py}{}
+college_ugds.ge(.15)
+
+diversity_metric = college_ugds.ge(.15).sum(
+    axis='columns'
+)
+diversity_metric.head(7)
+
+diversity_metric.value_counts()
+
+diversity_metric.sort_values(ascending=False).head(5)
+\end{py}
+\item
+It seems a little suspicious that schools can be that diverse. Let's look at the raw
+percentages from these top two schools. We will use .loc to select rows based
+on the index label:
+
+\begin{py}{}
+college_ugds.loc[
+    [
+        "Central Texas Beauty College-Temple", 
+        "Regency Beauty Institute-Austin", 
+    ]
+]
+\end{py}
+\subsection{There's more\dots}
+Alternatively, we can find the schools that are least diverse by ordering them by their
+maximum race percentage.
+
+We can also determine if any school has all nine race categories exceeding 1\%.
+
+\begin{minted}{python}
+(
+    college_ugds.max(axis='columns')
+    .sort_values(ascending=False)
+    .head(7)
+)
+
+(college_ugds > .01).all(axis='columns').any()
+\end{minted}
+
+\end{enumerate}
