@@ -1,0 +1,40 @@
+
+\usepackage{mathptmx}
+\usepackage{minted}
+\usepackage{tcolorbox}
+
+
+
+\title{Pandas 1.x Cookbook\\
+	\large Practical recipes for scientific computing, time series analysis, \\
+	and exploratory data analysis using Python
+	}
+	
+\author{Stephen CUI}
+
+\tcbuselibrary{minted, skins}
+\newtcblisting[auto counter, number within =section]{py}[1]{listing engine=minted,
+						 minted style=colorful,
+						 minted language=python,
+						 minted options={fontsize=\small,breaklines,autogobble,linenos,numbersep=3mm},
+						 colback=red!5!white,colframe=red!70!black,listing only, left=5mm,enhanced,
+						 title=Recipes~\thetcbcounter~#1,
+						 overlay={
+						 	\begin{tcbclipinterior}
+						 		\fill[red!30!white] (frame.south west)
+						 		rectangle ([xshift=5mm]frame.north west);
+							\end{tcbclipinterior}}
+							}
+							
+\usepackage{geometry}
+\geometry{left=2.45cm,right=2.45cm, top=2.77cm, bottom=2.77cm}
+
+\usepackage{hyperref}
+\hypersetup{
+	colorlinks=true,
+	linkcolor=cyan,
+	filecolor=blue,      
+	urlcolor=red!80!black,
+	citecolor=green,
+}
+
